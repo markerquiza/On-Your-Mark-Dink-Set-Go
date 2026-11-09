@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>On Your Mark, Dink, Set, Go! | Pickleball Queue</title>
+<style>
+[hidden] { display: none !important; }
+:root {
+  color-scheme: dark;
+  font: 16px/1.5 system-ui, sans-serif;
+  color: #eff4f7;
+  background: #0d1218;
+  --panel: #151e27;
+  --line: #33414d;
+  --muted: #aebdc9;
+  --accent: #cbfa65;
+}
+* { box-sizing: border-box; }
+body, h1, h2, h3, p { margin: 0; }
+a { color: var(--accent); }
+header { background: linear-gradient(125deg, #173238, #111a23 66%); border-bottom: 1px solid var(--line); }
+.hero {
+  max-width: 76rem;
+  margin: auto;
+  padding: clamp(1.75rem, 5vw, 4rem) clamp(1rem, 4vw, 2rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 25rem);
+  align-items: center;
+  gap: 2rem;
+}
+.eyebrow, .stat span {
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.eyebrow { color: var(--accent); }
+h1 { font-size: clamp(2rem, 6vw, 4.5rem); line-height: 1; letter-spacing: -.065em; margin: .55rem 0 .75rem; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.8rem); letter-spacing: -.035em; }
+h3 { font-size: 1.15rem; }
+.hero p, .hint, small, .stat span { color: var(--muted); }
+.court-art { width: 100%; height: auto; }
+main { max-width: 76rem; margin: auto; padding: 0 clamp(.85rem, 4vw, 2rem) 3rem; }
+nav { display: flex; gap: .35rem; flex-wrap: wrap; margin: 1rem 0 1.4rem; }
+nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: .5rem .85rem;
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: .65rem;
+  font-weight: 700;
+}
+nav a[aria-current="page"] { background: var(--accent); color: #17230c; }
+nav a:hover:not([aria-current="page"]) { background: var(--panel); color: white; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; margin-bottom: 1.35rem; }
+.stat, .panel, .court {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: clamp(.85rem, 2vw, 1.25rem);
+  min-width: 0;
+}
+.stat { border-top: 2px solid var(--accent); }
+.stat strong { display: block; font-size: clamp(1.6rem, 4vw, 2.5rem); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.stat span { display: block; margin-top: .25rem; }
+#session-page { max-width: 44rem; border-top: 3px solid var(--accent); }
+#session-page h2, #directory h2 { margin-bottom: .5rem; }
+#session-page .actions { margin-top: 1rem; }
+#desk-session { margin-bottom: 1rem; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .75rem; }
+.courts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.court { display: flex; flex-direction: column; gap: .65rem; min-height: 12rem; }
+.court .heading { margin: 0; }
+.badge { border-radius: 2rem; padding: .3rem .65rem; font-size: .75rem; font-weight: 800; background: #33414d; }
+.badge.available { background: #254354; color: #c3edff; }
+.badge.playing { background: var(--accent); color: #17230c; }
+.badge.called { background: #674b21; color: #ffdf9d; }
+.players { padding-left: 1.3rem; margin: 0; overflow-wrap: anywhere; }
+.actions { display: flex; gap: .45rem; flex-wrap: wrap; margin-top: auto; }
+button, input, select, #continue-session {
+  font: inherit;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: .6rem;
+  padding: .5rem .75rem;
+}
+button, #continue-session {
+  cursor: pointer;
+  background: var(--accent);
+  color: #17230c;
+  font-weight: 750;
+  text-decoration: none;
+}
+button.secondary { background: #202c36; color: #eff4f7; }
+button:hover:not(:disabled), #continue-session:hover { filter: brightness(1.12); }
+button:disabled { opacity: .55; cursor: default; }
+input, select { width: 100%; min-width: 0; background: #0d151d; color: inherit; }
+input[type="checkbox"]:not([role="switch"]) { width: 1.1rem !important; min-height: 1.1rem; accent-color: var(--accent); vertical-align: middle; }
+.switch-options { display: grid; gap: .3rem; }
+.switch-option { display: flex; align-items: center; gap: .75rem; min-height: 44px; cursor: pointer; }
+.switch-option input { appearance: none; position: relative; flex: 0 0 2.75rem; width: 2.75rem;
+  height: 1.55rem; min-height: 0; margin: 0; padding: 0; border: 1px solid #8294a2;
+  border-radius: 2rem; background: #293743; cursor: pointer; }
+.switch-option input::before { content: ""; position: absolute; top: .17rem; left: .17rem;
+  width: 1.08rem; height: 1.08rem; border-radius: 50%; background: #eef4f7; }
+.switch-option input:checked { background: var(--accent); border-color: var(--accent); }
+.switch-option input:checked::before { left: 1.33rem; background: #1c2a19; }
+.switch-option input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.switch-option input:disabled { opacity: .55; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+summary { cursor: pointer; padding: .45rem 0; min-height: 44px; font-weight: 700; overflow-wrap: anywhere; }
+form { display: grid; gap: .5rem; margin: .7rem 0 1rem; }
+form label { font-size: .9rem; font-weight: 650; }
+form label > input, form label > select { margin-top: .3rem; }
+form button { justify-self: start; }
+.queue { padding-left: 1.35rem; margin: .6rem 0; }
+.queue li { padding: .6rem 0; border-bottom: 1px solid var(--line); }
+.row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.row span, #member-results { overflow-wrap: anywhere; }
+.row button { font-size: .85rem; }
+.next { color: var(--accent); font-weight: 750; }
+.hint { font-size: .875rem; }
+#notice { color: #ffda92; margin-bottom: .75rem; }
+#notice:empty { display: none; }
+#member-results > div { padding: 1rem 0; border-top: 1px solid var(--line); }
+#member-results .actions { margin: .6rem 0; }
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; }
+  .layout > .panel { grid-row: 1; }
+  .hero { grid-template-columns: 1fr; }
+  .court-art { display: none; }
+}
+@media (max-width: 480px) {
+  .courts { grid-template-columns: 1fr; }
+  .stat { padding: .65rem .5rem; }
+  .stat span { font-size: .65rem; letter-spacing: .035em; }
+  nav { gap: .15rem; }
+  nav a { padding-inline: .65rem; }
+}
+.history-filters, .history-layout { display: grid; gap: .75rem; }
+.history-filters { grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); }
+.history-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+#history-status { margin-bottom: .75rem; }
+#history-sessions, #history-games { display: grid; gap: .55rem; margin-top: .5rem; }
+#history-sessions button { text-align: left; }
+#history-sessions button .hint { display: block; }
+#history-sessions [aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+#history-games details { border: 1px solid var(--line); border-radius: .6rem; padding: .55rem .8rem; overflow-wrap: anywhere; }
+#history-games details > p { margin: .35rem 0; }
+@media (max-width: 650px) { .history-layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+<div class="hero">
+<div>
+<div class="eyebrow">Pickleball · Open play</div>
+<h1>On Your Mark,<br>Dink, Set, Go!</h1>
+<p>Court desk by The MarkEr PH</p>
+</div>
+<svg class="court-art" viewBox="0 0 420 220" aria-hidden="true">
+  <rect x="2" y="2" width="416" height="216" rx="26" fill="#182c35" stroke="#44616b"/>
+  <rect x="35" y="28" width="350" height="164" rx="3" fill="#203b45" stroke="#a4c7ca" stroke-width="2"/>
+  <path d="M35 110h116m118 0h116M151 28v164M269 28v164" fill="none" stroke="#a4c7ca" stroke-width="2"/>
+  <path d="M210 20v180" stroke="#cbfa65" stroke-width="3" stroke-dasharray="5 5"/>
+  <g transform="rotate(-29 304 126)" stroke="#bce3dd" stroke-width="2">
+    <rect x="294" y="119" width="20" height="65" rx="7" fill="#253b45"/>
+    <rect x="268" y="61" width="72" height="79" rx="22" fill="#387176"/>
+    <path d="M279 117l49-42m-44 53l49-42" stroke="#8bc5b5"/>
+  </g>
+  <circle cx="254" cy="65" r="21" fill="#cbfa65"/>
+  <g fill="#243a19">
+    <circle cx="247" cy="59" r="3"/><circle cx="259" cy="55" r="2.5"/>
+    <circle cx="263" cy="66" r="3"/><circle cx="250" cy="70" r="3"/>
+    <circle cx="256" cy="78" r="2.5"/>
+  </g>
+</svg>
+</div>
+</header>
+<main>
+<nav aria-label="Admin pages"><a href="/">Open play</a> · <a href="/courts">Court desk</a> · <a href="/players">Players</a><a href="/history">History</a></nav>
+<p id="notice" role="status"></p>
+<section id="history-page" class="panel" hidden aria-labelledby="history-title">
+<h2 id="history-title">Session history</h2>
+<form id="history-filters">
+<div class="history-filters">
+<label>From date<input id="history-from" type="date"></label>
+<label>To date<input id="history-to" type="date"></label>
+<label>Player name<input id="history-player" type="search" maxlength="80"></label>
+<label>Court number<input id="history-court" type="number" min="1" max="24"></label>
+</div>
+<div class="actions"><button>Apply filters</button><button type="reset" class="secondary">Clear filters</button></div>
+</form>
+<p id="history-status" role="status"></p>
+<div class="history-layout">
+<section aria-labelledby="history-sessions-title">
+<h3 id="history-sessions-title">Sessions</h3>
+<div id="history-sessions"></div>
+</section>
+<section aria-labelledby="history-games-title">
+<h3 id="history-games-title">Matches</h3>
+<div id="history-games"></div>
+</section>
+</div>
+</section>
+<section id="directory" class="panel" hidden>
+<h2>Players</h2>
+<details id="add-player">
+<summary>Add a player</summary>
+</details>
+<form id="member-search">
+<label for="member-query">Search by name or last four mobile digits</label>
+<input id="member-query" type="search" maxlength="80">
+<button>Find players</button>
+</form>
+<div id="member-results" aria-live="polite"></div>
+</section>
+<section id="session-page" class="panel" hidden aria-labelledby="session-title">
+<h2 id="session-title">Open-play session</h2>
+<p id="session-status" class="hint">Connecting…</p>
+<form id="session-start" hidden>
+<label for="session-name">Session name</label>
+<input id="session-name" required maxlength="80" value="Open Play">
+<button>Start session</button>
+</form>
+<div class="actions">
+<a id="continue-session" href="/courts" hidden>Continue to court desk</a>
+<button id="session-end" class="secondary" hidden>End session</button>
+<button id="backup" class="secondary">Back up now</button>
+</div>
+</section>
+<div id="desk" hidden>
+<p id="desk-session" hidden>Open play is closed. <a href="/">Start a session</a> to open the queue.</p>
+<div class="stats" aria-label="Queue summary">
+<div class="stat"><strong id="waiting">—</strong><span>Waiting</span></div>
+<div class="stat"><strong id="available">—</strong><span>Open courts</span></div>
+<div class="stat"><strong id="completed">—</strong><span>Games completed</span></div>
+</div>
+<div class="layout">
+<section aria-labelledby="court-title"><div class="heading"><h2 id="court-title">Courts</h2><small id="connection">Connecting…</small></div><div class="courts" id="courts"></div></section>
+<section class="panel" aria-labelledby="queue-title">
+<div class="heading"><h2 id="queue-title">Player queue</h2></div>
+<form id="join" autocomplete="off">
+<label for="name">Player display name</label>
+<input id="name" required maxlength="40" placeholder="e.g. Alex R.">
+<label for="phone">Mobile number</label>
+<input id="phone" type="tel" required maxlength="32" placeholder="e.g. 0917 123 4567">
+<label for="email">Email address (optional)</label>
+<input id="email" type="email" maxlength="254">
+<label for="level">Player level</label>
+<select id="level" required>
+<option value="">Select a level</option>
+<option>Beginner</option>
+<option>Advanced Beginner</option>
+<option>Low Intermediate</option>
+<option>Intermediate</option>
+<option>High Intermediate</option>
+<option>Advanced</option>
+</select>
+<button>Register player</button>
+</form>
+<div class="switch-options">
+  <label class="switch-option"><input id="split" type="checkbox" role="switch"> <span>Prefer winners with winners and losers with losers</span></label>
+  <label class="switch-option"><input id="auto-assign" type="checkbox" role="switch"> <span>Automatically assign open courts</span></label>
+</div>
+<p class="hint" id="queue-hint"></p>
+<ol class="queue" id="queue"></ol>
+<button id="undo-done" class="secondary" hidden>Undo last Done</button>
+</section>
+</div>
+</div>
+</main>
+<script>
+const byId = id => document.getElementById(id);
+const sessionDate = new Intl.DateTimeFormat('en-PH', { dateStyle: 'long' }).format(new Date());
+byId('session-name').value = 'Open Play - ' + sessionDate;
+const playersPage = location.pathname.startsWith('/players');
+const courtsPage = location.pathname.startsWith('/courts');
+const historyPage = location.pathname.startsWith('/history');
+byId('history-page').hidden = !historyPage;
+byId('desk').hidden = !courtsPage;
+byId('session-page').hidden = playersPage || courtsPage || historyPage;
+document.querySelector(`nav a[href="${historyPage ? '/history' : playersPage ? '/players' : courtsPage ? '/courts' : '/'}"]`)
+  .setAttribute('aria-current', 'page');
+byId('directory').hidden = !playersPage;
+if (playersPage) {
+  byId('add-player').append(byId('join'));
+  byId('join').querySelector('button').textContent = 'Save player';
+}
+let board;
+let busy = false;
+let lastDone = null;
+let refreshing = false;
+let revision = 0;
+const element = (tag, value, className) => {
+  const node = document.createElement(tag);
+  if (value) node.textContent = value;
+  if (className) node.className = className;
+  return node;
+};
+function button(label, data, secondary = false, disabled = false) {
+  const node = element('button', label, secondary ? 'secondary' : '');
+  node.disabled = disabled;
+  node.onclick = () => submit(data);
+  return node;
+}
+function updateWaitLabels() {
+  const now = Math.floor(Date.now() / 1000);
+  for (const label of document.querySelectorAll('[data-wait-since]')) {
+    const end = label.dataset.restStarted ? Number(label.dataset.restStarted) : now;
+    const minutes = Math.max(0, Math.floor((end - Number(label.dataset.waitSince)) / 60));
+    label.textContent = ` · ${minutes} min active wait`;
+  }
+}
+function render(next) {
+  if (JSON.stringify(board) === JSON.stringify(next)) return;
+  board = next;
+  const { courts, queue, completed, split, session } = board;
+  const sessionOpen = Boolean(session && !session.ended);
+  byId('session-status').textContent = session
+    ? `${session.name} · ${sessionOpen ? 'In progress' : 'Ended'} · ${completed} completed games`
+    : 'Start a session to open the queue.';
+  byId('session-start').hidden = sessionOpen;
+  byId('continue-session').hidden = !sessionOpen;
+  byId('desk-session').hidden = sessionOpen;
+  if (!courtsPage) return;
+  byId('session-end').hidden = !sessionOpen;
+  byId('join').querySelector('button').disabled = !playersPage && !sessionOpen;
+  const eligible = new Set(courts.flatMap(court => court.next_group));
+  const expanded = new Set([...document.querySelectorAll('details[data-court][open]')]
+    .map(details => details.dataset.court));
+  byId("split").checked = split;
+  byId("auto-assign").checked = board.auto_assign;
+  byId('waiting').textContent = queue.filter(player => !player.resting).length;
+  const playersById = new Map(queue.map(player => [player.id, player]));
+  byId('available').textContent = courts.filter(court => court.open && !court.match_id).length;
+  byId('completed').textContent = completed;
+  byId('queue-hint').textContent = 'First games come first, then longest active wait. ' +
+    (split ? 'Matching results is a preference when players have equal priority.' : '');
+  byId('queue').replaceChildren(...queue.map(player => {
+    const item = element('li', '', eligible.has(player.id) ? 'next' : '');
+    const row = element('div', '', 'row');
+    const controls = element('div', '', 'actions');
+    controls.append(button(player.resting ? 'Ready' : 'Rest',
+      { action: player.resting ? 'ready' : 'rest', ticket: player.id }, true));
+    const done = element('button', 'Done', 'secondary');
+    done.setAttribute('aria-label', `Mark ${player.name} done for the day`);
+    done.onclick = async () => {
+      if (await submit({ action: 'done', ticket: player.id })) {
+        lastDone = player.id;
+        byId('undo-done').hidden = false;
+      }
+    };
+    controls.append(done);
+    const lane = player.lane ? ` · ${player.lane === 'winner' ? 'Winners' : 'Losers'}` : '';
+    const level = player.level ? ' · ' + player.level : '';
+    const summary = element('span', player.name + level + lane + ` · ${player.games} played` +
+      (player.resting ? ' · Resting' : ''));
+    const wait = element('small');
+    wait.dataset.waitSince = player.wait_since;
+    if (player.rest_started) wait.dataset.restStarted = player.rest_started;
+    summary.append(wait);
+    row.append(summary, controls);
+    item.append(row);
+    return item;
+  }));
+  updateWaitLabels();
+  byId('courts').replaceChildren(...courts.map(court => {
+    const card = element('article', '', 'court');
+    const title = element('div', '', 'heading');
+    const status = court.started ? 'Playing' : court.match_id ? 'Called' : court.open ? 'Available' : 'Paused';
+    title.append(element('h3', `Court ${court.id}`), element('span', status, `badge ${status.toLowerCase()}`));
+    card.append(title);
+    const actions = element('div', '', 'actions');
+    const payload = { court: court.id, match: court.match_id };
+    if (court.match_id) {
+      const list = element('ul', '', 'players');
+      list.append(...court.players.map((name, index) =>
+        element('li', `Team ${index < 2 ? 'A' : 'B'} · ${name}`)));
+      card.append(list);
+      if (court.selection_reason) card.append(element('p', court.selection_reason, 'hint'));
+      if (court.started) {
+        const form = element('form');
+        const scores = ['A', 'B'].map(team => {
+          const label = element('label', `Team ${team} score`);
+          const input = element('input');
+          input.type = 'number';
+          input.min = 0;
+          input.max = 999;
+          input.step = 1;
+          input.inputMode = 'numeric';
+          label.append(input);
+          form.append(label);
+          return input;
+        });
+        let winner;
+        if (split) {
+          const label = element('label', 'Winner if finishing without a score');
+          winner = element('select');
+          winner.append(new Option('Select team', ''), new Option('Team A', 'A'), new Option('Team B', 'B'));
+          label.append(winner);
+          form.append(label);
+        }
+        form.append(element('button', 'Finish game'));
+        form.onsubmit = event => {
+          event.preventDefault();
+          const [scoreA, scoreB] = scores.map(input => input.value === '' ? null : input.valueAsNumber);
+          submit({ ...payload, action: 'finish', score_a: scoreA, score_b: scoreB,
+            winner: winner?.value || null });
+        };
+        card.append(form);
+      } else {
+        actions.append(button('Start game', { ...payload, action: 'start' }),
+          button(board.auto_assign ? 'Return group and pause court' : 'Return group', { ...payload, action: 'cancel' }, true));
+      }
+    } else {
+      card.append(element('p', court.open ? 'Ready for the next group.' : 'Assignments are paused.', 'hint'));
+      const filters = element('details');
+      filters.dataset.court = court.id;
+      filters.open = expanded.has(String(court.id));
+      filters.append(element('summary', court.levels.join(', ') || 'All player levels'));
+      const levelOptions = [...byId('level').options].filter(option => option.value);
+      filters.append(element('p', 'Select one level or several. Clear all to allow everyone.', 'hint'));
+      for (const option of levelOptions) {
+        const label = element('label');
+        label.style.display = 'block';
+        const checkbox = element('input');
+        checkbox.type = 'checkbox';
+        checkbox.style.width = 'auto';
+        checkbox.checked = court.levels.includes(option.value);
+        checkbox.onchange = async () => {
+          const levels = checkbox.checked
+            ? [...court.levels, option.value]
+            : court.levels.filter(level => level !== option.value);
+          if (!await submit({ ...payload, action: 'court_levels', levels })) {
+            checkbox.checked = court.levels.includes(option.value);
+          }
+        };
+        label.append(checkbox, document.createTextNode(' ' + option.value));
+        filters.append(label);
+      }
+      card.append(filters);
+      const group = court.next_group;
+      if (court.open) {
+        actions.append(button('Call next four', { ...payload, action: 'call', group }, false, !group.length));
+        if (group.length) {
+          card.append(element('strong', 'Next four'));
+          const preview = element('ol', '', 'players');
+          preview.append(...group.map(id => element('li', playersById.get(id).name)));
+          card.append(preview, element('p', court.selection_reason, 'hint'));
+        } else {
+          const ready = queue.filter(player => !player.resting &&
+            (!court.levels.length || court.levels.includes(player.level)));
+          card.append(element('p', `Waiting for ${4 - ready.length} more eligible player(s).`, 'hint'));
+        }
+      }
+      actions.append(button(court.open ? 'Pause' : 'Reopen', { ...payload, action: 'toggle', open: court.open }, true));
+    }
+    card.append(actions);
+    return card;
+  }));
+}
+async function refresh() {
+  if (playersPage || busy || refreshing) return;
+  refreshing = true;
+  const snapshot = revision;
+  try {
+    const response = await fetch('/api/state');
+    if (!response.ok) throw new Error();
+    const next = await response.json();
+    if (snapshot === revision) {
+      if (!courtsPage && byId('session-status').dataset.disconnected) {
+        delete byId('session-status').dataset.disconnected;
+        board = undefined;
+      }
+      render(next);
+    }
+    byId('connection').textContent = 'Live';
+  } catch {
+    byId('connection').textContent = 'Disconnected';
+    if (!courtsPage) {
+      const status = byId('session-status');
+      status.textContent = 'Disconnected. Check that the local server is running.';
+      status.dataset.disconnected = 'true';
+    }
+  } finally {
+    refreshing = false;
+  }
+}
+async function submit(data) {
+  if (busy) return false;
+  busy = true;
+  revision++;
+  byId('notice').textContent = '';
+  try {
+    const response = await fetch('/api/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    const backupMessage = result.backup_message;
+    delete result.backup_message;
+    render(result);
+    if (backupMessage) byId('notice').textContent = backupMessage;
+    return true;
+  } catch (error) {
+    byId('notice').textContent = error instanceof TypeError
+      ? 'Connection interrupted. Check the board before retrying.' : error.message;
+    return false;
+  } finally {
+    busy = false;
+    refresh();
+  }
+}
+byId('session-start').onsubmit = async event => {
+  event.preventDefault();
+  if (await submit({ action: 'start_session', name: byId('session-name').value })) {
+    if ('BroadcastChannel' in window) {
+      const sessionChannel = new BroadcastChannel('court-desk-session');
+      sessionChannel.postMessage('started');
+      sessionChannel.close();
+    }
+    location.assign('/courts');
+  }
+};
+byId('session-end').onclick = () => {
+  if (window.confirm('End this session? Waiting and resting players will be cleared from the queue.')) {
+    submit({ action: 'end_session', session: board.session.id });
+  }
+};
+byId('backup').onclick = () => submit({ action: 'backup' });
+byId('undo-done').onclick = async () => {
+  if (await submit({ action: 'undo_done', ticket: lastDone })) {
+    lastDone = null;
+    byId('undo-done').hidden = true;
+  }
+};
+byId('auto-assign').onchange = async event => {
+  if (!await submit({ action: 'assignment_mode', enabled: event.target.checked })) {
+    event.target.checked = board?.auto_assign ?? false;
+  }
+};
+byId('split').onchange = async event => {
+  if (!await submit({ action: 'rotation', split: event.target.checked })) {
+    event.target.checked = board?.split ?? false;
+  }
+};
+async function loadRecords(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error('Could not load player records.');
+  return response.json();
+}
+let historyRequest = 0;
+function dayKey(timestamp) {
+  const date = new Date(timestamp * 1000);
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')].join('-');
+}
+
+async function showSession(session, filters, controls) {
+  const request = ++historyRequest;
+  const games = byId('history-games');
+  byId('history-games-title').textContent = session.name;
+  for (const [id, control] of controls) control.setAttribute('aria-pressed', String(id === session.id));
+  games.textContent = 'Loading matches…';
+  try {
+    const matches = await loadRecords('/api/session-history?' + new URLSearchParams({
+      ...filters, session: session.id
+    }));
+    if (request !== historyRequest) return;
+    games.replaceChildren(...matches.map(match => {
+      const card = element('details');
+      const score = match.score_a === null ? 'Score not recorded' : `${match.score_a}–${match.score_b}`;
+      const start = new Date(match.started * 1000).toLocaleString();
+      const duration = Math.ceil((match.ended - match.started) / 60);
+      card.append(element('summary', `Court ${match.court} · ${score} · ${start}`),
+        element('p', 'Team A · ' + (match.players.slice(0, 2).join(' / ') || 'Roster unavailable')),
+        element('p', 'Team B · ' + (match.players.slice(2).join(' / ') || 'Roster unavailable')),
+        element('p', `${duration} min${match.winner ? ' · Team ' + match.winner + ' won' : ''}`, 'hint'));
+      return card;
+    }));
+    if (!matches.length) games.textContent = 'No completed matches in this session.';
+  } catch {
+    if (request === historyRequest) games.textContent = 'Could not load matches.';
+  }
+}
+
+async function loadHistory() {
+  const request = ++historyRequest;
+  const from = byId('history-from').value;
+  const to = byId('history-to').value;
+  const status = byId('history-status');
+  const list = byId('history-sessions');
+  const games = byId('history-games');
+  list.replaceChildren();
+  games.replaceChildren();
+  byId('history-games-title').textContent = 'Matches';
+  if (from && to && from > to) {
+    status.textContent = 'Choose an end date on or after the start date.';
+    return;
+  }
+  status.textContent = 'Loading sessions…';
+  const filters = { player: byId('history-player').value.trim(), court: byId('history-court').value };
+  try {
+    const sessions = (await loadRecords('/api/session-history?' + new URLSearchParams(filters)))
+      .filter(session => (!from || dayKey(session.started) >= from) && (!to || dayKey(session.started) <= to));
+    if (request !== historyRequest) return;
+    status.textContent = sessions.length ? '' : 'No sessions match these filters.';
+    const controls = new Map();
+    for (const session of sessions) {
+      const control = element('button', '', 'secondary');
+      const started = new Date(session.started * 1000).toLocaleString();
+      const ended = session.ended ? new Date(session.ended * 1000).toLocaleString() : 'In progress';
+      control.append(element('strong', session.name),
+        element('span', `${started} · ${ended}`, 'hint'),
+        element('span', `${session.games} completed ${session.games === 1 ? 'match' : 'matches'}`, 'hint'));
+      control.onclick = () => showSession(session, filters, controls);
+      controls.set(session.id, control);
+      list.append(control);
+    }
+    if (sessions.length) showSession(sessions.find(session => session.games) || sessions[0], filters, controls);
+  } catch {
+    if (request === historyRequest) status.textContent = 'Could not load session history.';
+  }
+}
+
+byId('history-filters').onsubmit = event => {
+  event.preventDefault();
+  loadHistory();
+};
+byId('history-filters').onreset = () => setTimeout(loadHistory, 0);
+byId('member-search').onsubmit = async event => {
+  event.preventDefault();
+  const results = byId('member-results');
+  const query = encodeURIComponent(byId('member-query').value.trim());
+  results.textContent = 'Searching…';
+  try {
+    const members = await loadRecords('/api/members?q=' + query);
+    if (!members.length) {
+      results.textContent = 'No saved players found.';
+      return;
+    }
+    results.replaceChildren(...members.map(member => {
+      const entry = element('div');
+      entry.append(element('p', `${member.name} · •••• ${member.last_four}`));
+      entry.append(element('small', member.level || 'Level not recorded'));
+      const actions = element('div', '', 'actions');
+      const add = element('button', 'Add to queue');
+      add.disabled = Boolean(member.active);
+      if (member.active) add.textContent = 'Already queued or playing';
+      add.onclick = async () => {
+        if (await submit({ action: 'join_member', member: member.id })) {
+          add.disabled = true;
+          add.textContent = 'Added to queue';
+        }
+      };
+      const view = element('button', 'Game history', 'secondary');
+      const history = element('ul', '', 'players');
+      view.onclick = async () => {
+        history.replaceChildren(element('li', 'Loading…'));
+        try {
+          const games = await loadRecords('/api/member-history?id=' + member.id);
+          history.replaceChildren(...games.map(game => {
+            const date = new Date(game.ended * 1000).toLocaleString();
+            const duration = Math.ceil((game.ended - game.started) / 60);
+            const entry = element('li');
+            const score = game.score === null ? 'Score not recorded' : `${game.score}–${game.opponent_score}`;
+            entry.append(element('strong', `${game.result || 'Completed'} · ${score}`),
+              element('div', `${date} · Court ${game.court} · ${duration} min`),
+              element('div', 'Partner: ' + (game.partners.join(', ') || 'Not recorded')),
+              element('div', 'Opponents: ' + (game.opponents.join(', ') || 'Not recorded')));
+            return entry;
+          }));
+          if (!games.length) history.append(element('li', 'No completed games yet.'));
+        } catch {
+          history.replaceChildren(element('li', 'Could not load game history.'));
+        }
+      };
+      const edit = element('button', 'Edit player', 'secondary');
+      const editor = element('form');
+      editor.hidden = true;
+      const fields = [
+        ['Display name', element('input')],
+        ['New mobile number (optional)', element('input')],
+        ['Player level', byId('level').cloneNode(true)],
+        ['Email address (optional)', element('input')]
+      ];
+      const [name, phone, level, email] = fields.map(([, input]) => input);
+      name.value = member.name;
+      email.type = 'email';
+      email.maxLength = 254;
+      email.value = member.email || '';
+      name.required = true;
+      name.maxLength = 40;
+      phone.type = 'tel';
+      phone.maxLength = 32;
+      level.removeAttribute('id');
+      level.value = member.level || '';
+      for (const [caption, input] of fields) {
+        const label = element('label', caption);
+        label.append(input);
+        editor.append(label);
+      }
+      editor.append(element('button', 'Save changes'));
+      edit.onclick = () => {
+        editor.hidden = !editor.hidden;
+        if (!editor.hidden) name.focus();
+      };
+      editor.onsubmit = async event => {
+        event.preventDefault();
+        if (await submit({ action: 'edit_member', member: member.id,
+          name: name.value, phone: phone.value.trim(), level: level.value, email: email.value })) {
+          byId('member-query').value = name.value;
+          byId('member-search').requestSubmit();
+        }
+      };
+      const remove = element('button', 'Delete player', 'secondary');
+      remove.onclick = async () => {
+        const confirmed = window.confirm(
+          `Permanently delete ${member.name} (mobile ending ${member.last_four})? ` +
+          'Their profile and queue entry will be removed. Shared games will show “Deleted player”. ' +
+          'This cannot be undone.'
+        );
+        if (confirmed && await submit({ action: 'delete_member', member: member.id, confirmed })) {
+          byId('member-search').requestSubmit();
+        }
+      };
+      const report = element('form');
+      const dateLabel = element('label', 'Game history date');
+      const date = element('input');
+      date.type = 'date';
+      date.required = true;
+      const today = new Date();
+      const localDate = value => [
+        value.getFullYear(), String(value.getMonth() + 1).padStart(2, '0'),
+        String(value.getDate()).padStart(2, '0')
+      ].join('-');
+      date.value = localDate(today);
+      dateLabel.append(date);
+      const draft = element('button', 'Open email draft', 'secondary');
+      const reportStatus = element('p', '', 'hint');
+      reportStatus.setAttribute('role', 'status');
+      report.append(dateLabel, draft, reportStatus);
+      report.onsubmit = async event => {
+        event.preventDefault();
+        draft.disabled = true;
+        reportStatus.textContent = '';
+        try {
+          const day = date.value;
+          const games = (await loadRecords('/api/member-history?id=' + member.id))
+            .filter(game => localDate(new Date(game.ended * 1000)) === day)
+            .reverse();
+          if (!games.length) {
+            reportStatus.textContent = 'No completed games on this date.';
+            return;
+          }
+          const lines = games.map(game => {
+            const score = game.score === null ? 'Score not recorded' : `${game.score}–${game.opponent_score}`;
+            const time = new Date(game.ended * 1000).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+            return [
+              `${time} · Court ${game.court} · ${game.result || 'Completed'} · ${score}`,
+              `Partner: ${game.partners.join(', ') || 'Not recorded'}`,
+              `Opponents: ${game.opponents.join(', ') || 'Not recorded'}`
+            ].join('\r\n');
+          });
+          const subject = `Pickleball game history for ${day}`;
+          const body = [`Hi ${member.name},`, `Here are your completed games for ${day}.`,
+            ...lines, 'The MarkEr PH'].join('\r\n\r\n');
+          const recipient = encodeURIComponent(member.email).replace('%40', '@');
+          location.href = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          reportStatus.textContent = 'Review and send the draft in your mail app.';
+        } catch {
+          reportStatus.textContent = 'Could not prepare the email draft.';
+        } finally {
+          draft.disabled = false;
+        }
+      };
+      actions.append(add, view, edit, remove);
+      entry.append(actions, editor, history);
+      if (member.email) entry.append(report);
+      return entry;
+    }));
+  } catch {
+    results.textContent = 'Could not load saved players.';
+  }
+};
+byId('join').onsubmit = async event => {
+  event.preventDefault();
+  const nameInput = byId('name');
+  const phoneInput = byId('phone');
+  const name = nameInput.value;
+  const phone = phoneInput.value;
+  const levelInput = byId('level');
+  const level = levelInput.value;
+  const emailInput = byId('email');
+  const email = emailInput.value;
+  const action = playersPage ? 'add_member' : 'join';
+  if (await submit({ action, name, phone, level, email })) {
+    if (playersPage) {
+      byId('member-query').value = name;
+      byId('member-search').requestSubmit();
+    }
+    if (emailInput.value === email) emailInput.value = '';
+    if (levelInput.value === level) levelInput.value = '';
+    if (nameInput.value === name) nameInput.value = '';
+    if (phoneInput.value === phone) phoneInput.value = '';
+    nameInput.focus();
+  }
+};
+if (historyPage) {
+  loadHistory();
+} else if (playersPage) {
+  byId('member-search').requestSubmit();
+} else {
+  refresh();
+  setInterval(() => {
+    refresh();
+    if (courtsPage) updateWaitLabels();
+  }, 2500);
+}
+</script>
+</body>
+</html>
