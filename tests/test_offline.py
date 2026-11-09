@@ -23,6 +23,8 @@ class OfflineDeskTest(unittest.TestCase):
         thread.start()
         self.addCleanup(thread.join)
         self.addCleanup(self.server.shutdown)
+        self.assertEqual(self.request("/api/session-history"), (200, []))
+        self.action("start_session", name="Test open play")
 
     def enter_folder(self):
         folder = TemporaryDirectory()

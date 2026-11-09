@@ -171,8 +171,10 @@ def initialize(path, courts):
         match_columns = {column["name"] for column in db.execute("PRAGMA table_info(matches)")}
         if "session_id" not in match_columns:
             db.execute("ALTER TABLE matches ADD COLUMN session_id INTEGER REFERENCES play_sessions(id)")
-            session = db.execute("INSERT INTO play_sessions(name) VALUES ('Open play')").lastrowid
-            db.execute("UPDATE matches SET session_id = ?", (session,))
+            # Group legacy matches without creating a session on a clean install.
+            if db.execute("SELECT 1 FROM matches LIMIT 1").fetchone():
+                session = db.execute("INSERT INTO play_sessions(name) VALUES ('Open play')").lastrowid
+                db.execute("UPDATE matches SET session_id = ?", (session,))
         db.execute("CREATE INDEX IF NOT EXISTS matches_session ON matches(session_id)")
         if "winner" not in match_columns:
             db.execute("ALTER TABLE matches ADD COLUMN winner TEXT CHECK (winner IN ('A', 'B'))")
