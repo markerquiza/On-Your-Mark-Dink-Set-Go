@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>On Your Mark, Dink, Set, Go! | Pickleball Queue</title>
+<!-- CSS: shared colors, responsive layouts, buttons, forms, and court cards. -->
 <style>
 [hidden] { display: none !important; }
 :root {
@@ -182,8 +183,10 @@ form button { justify-self: start; }
 </div>
 </header>
 <main>
+<!-- Navigation: the four admin pages share this document. JavaScript shows the matching section. -->
 <nav aria-label="Admin pages"><a href="/">Open play</a> · <a href="/courts">Court desk</a> · <a href="/players">Players</a><a href="/history">History</a></nav>
 <p id="notice" role="status"></p>
+<!-- History: filter session summaries and inspect the completed matches in a selected session. -->
 <section id="history-page" class="panel" hidden aria-labelledby="history-title">
 <h2 id="history-title">Session history</h2>
 <form id="history-filters">
@@ -207,6 +210,7 @@ form button { justify-self: start; }
 </section>
 </div>
 </section>
+<!-- Players: search saved profiles and open the controls to edit or review a player. -->
 <section id="directory" class="panel" hidden>
 <h2>Players</h2>
 <details id="add-player">
@@ -219,6 +223,7 @@ form button { justify-self: start; }
 </form>
 <div id="member-results" aria-live="polite"></div>
 </section>
+<!-- Open play: start, resume, end, or back up a session. -->
 <section id="session-page" class="panel" hidden aria-labelledby="session-title">
 <h2 id="session-title">Open-play session</h2>
 <p id="session-status" class="hint">Connecting…</p>
@@ -244,6 +249,7 @@ form button { justify-self: start; }
 <section aria-labelledby="court-title"><div class="heading"><h2 id="court-title">Courts</h2><small id="connection">Connecting…</small></div><div class="courts" id="courts"></div></section>
 <section class="panel" aria-labelledby="queue-title">
 <div class="heading"><h2 id="queue-title">Player queue</h2></div>
+<!-- Player registration: this form is reused for adding a saved player from the directory. -->
 <form id="join" autocomplete="off">
 <label for="name">Player display name</label>
 <input id="name" required maxlength="40" placeholder="e.g. Alex R.">
@@ -274,7 +280,9 @@ form button { justify-self: start; }
 </div>
 </div>
 </main>
+<!-- JavaScript: connect the controls and display to the local Python server. -->
 <script>
+// Find controls by ID and select the page based on the browser URL.
 const byId = id => document.getElementById(id);
 const sessionDate = new Intl.DateTimeFormat('en-PH', { dateStyle: 'long' }).format(new Date());
 byId('session-name').value = 'Open Play - ' + sessionDate;
@@ -302,12 +310,14 @@ const element = (tag, value, className) => {
   if (className) node.className = className;
   return node;
 };
+// Build a button tied to a specific server action and its record IDs.
 function button(label, data, secondary = false, disabled = false) {
   const node = element('button', label, secondary ? 'secondary' : '');
   node.disabled = disabled;
   node.onclick = () => submit(data);
   return node;
 }
+// Update visible wait counters without sending a network request.
 function updateWaitLabels() {
   const now = Math.floor(Date.now() / 1000);
   for (const label of document.querySelectorAll('[data-wait-since]')) {
@@ -316,6 +326,7 @@ function updateWaitLabels() {
     label.textContent = ` · ${minutes} min active wait`;
   }
 }
+// Rebuild the court and queue views from the latest server response. The browser does not choose teams.
 function render(next) {
   if (JSON.stringify(board) === JSON.stringify(next)) return;
   board = next;
@@ -464,6 +475,7 @@ function render(next) {
     return card;
   }));
 }
+// Read the current board. Avoid overlapping refreshes and keep the previous view if a request fails.
 async function refresh() {
   if (playersPage || busy || refreshing) return;
   refreshing = true;
@@ -491,6 +503,7 @@ async function refresh() {
     refreshing = false;
   }
 }
+// Send a staff action to Python. Update the board on success or show the server’s reason for rejecting it.
 async function submit(data) {
   if (busy) return false;
   busy = true;
@@ -516,6 +529,7 @@ async function submit(data) {
     refresh();
   }
 }
+// Send the editable session name and switch to the court desk after a successful start.
 byId('session-start').onsubmit = async event => {
   event.preventDefault();
   if (await submit({ action: 'start_session', name: byId('session-name').value })) {
@@ -549,18 +563,21 @@ byId('split').onchange = async event => {
     event.target.checked = board?.split ?? false;
   }
 };
+// Read directory or history data from the appropriate JSON endpoint.
 async function loadRecords(path) {
   const response = await fetch(path);
   if (!response.ok) throw new Error('Could not load player records.');
   return response.json();
 }
 let historyRequest = 0;
+// Convert a timestamp to a calendar day in the browser’s local time.
 function dayKey(timestamp) {
   const date = new Date(timestamp * 1000);
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'),
     String(date.getDate()).padStart(2, '0')].join('-');
 }
 
+// Load the selected session’s roster and scores. Ignore old results if the user switches sessions.
 async function showSession(session, filters, controls) {
   const request = ++historyRequest;
   const games = byId('history-games');
@@ -589,6 +606,7 @@ async function showSession(session, filters, controls) {
   }
 }
 
+// Apply the history filters, render the matching sessions, and select a session to inspect.
 async function loadHistory() {
   const request = ++historyRequest;
   const from = byId('history-from').value;

@@ -13,6 +13,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parent
+# Base tables: sessions group play, courts hold capacity, matches track games,
+# and tickets represent each player’s entry and roster seat. Later migrations add fields.
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS play_sessions (
     id INTEGER PRIMARY KEY,
@@ -49,10 +51,12 @@ CREATE INDEX IF NOT EXISTS waiting_order ON tickets(id)
 LEVELS = ('Beginner', 'Advanced Beginner', 'Low Intermediate', 'Intermediate', 'High Intermediate', 'Advanced')
 
 
+# A user-facing rule violation, such as trying to start an occupied court or submit an old match ID.
 class QueueError(Exception):
     pass
 
 
+# Open the local SQLite file, return named columns, and enforce foreign keys on each connection.
 def connect(path):
     db = sqlite3.connect(path, timeout=5)
     db.row_factory = sqlite3.Row
@@ -60,6 +64,7 @@ def connect(path):
     return db
 
 
+# Copy a consistent database snapshot to a temporary file, verify its integrity, then publish it without overwriting a backup.
 def backup_database(source, destination):
     """Create and verify a snapshot without overwriting an existing backup."""
     source, destination = Path(source), Path(destination)
@@ -79,16 +84,19 @@ def backup_database(source, destination):
     return destination
 
 
+# Choose a unique timestamped backup name beside the database.
 def snapshot(path, label):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     destination = path.parent / "backups" / f"{path.stem}-{label}-{timestamp}.sqlite3"
     return backup_database(path, destination)
 
 
+# Return the only session that has no end time. A unique database index enforces this invariant.
 def active_session(db):
     return db.execute("SELECT * FROM play_sessions WHERE ended IS NULL").fetchone()
 
 
+# Give saved profiles stable IDs and link older tickets to profiles and sessions where the old data supports it.
 def migrate_player_identity(db):
     db.execute("ALTER TABLE profiles ADD COLUMN player_id TEXT")
     db.execute("UPDATE profiles SET player_id = lower(hex(randomblob(16)))")
@@ -120,6 +128,7 @@ def migrate_player_identity(db):
     db.execute("PRAGMA user_version = 1")
 
 
+# Create or upgrade the local schema. Back up existing databases before migration and seed courts only when none exist.
 def initialize(path, courts):
     path = Path(path)
     if path.is_file() and path.stat().st_size:
@@ -192,6 +201,7 @@ def initialize(path, courts):
             fill_courts(db)
 
 
+# Collect unassigned, open tickets. Order eligible players by first-game priority, active wait, games played and ticket ID.
 def waiting(db):
     return db.execute("""
         SELECT ticket.id, ticket.name, ticket.joined, ticket.previous_game, ticket.lane,
@@ -206,6 +216,7 @@ def waiting(db):
     """).fetchall()
 
 
+# Filter by allowed levels, select four eligible tickets, then compare the possible doubles pairings for those four.
 def next_group(queue, split, levels=()):
     eligible = [player for player in queue
                 if not player["resting"] and (not levels or player["level"] in levels)]
@@ -245,6 +256,7 @@ def next_group(queue, split, levels=()):
     return [selected[index]["id"] for index in seats], reason
 
 
+# Create a match and set its four seat numbers. Seats 1–2 are Team A and 3–4 are Team B.
 def assign_group(db, court_id, session_id, group, reason):
     match = db.execute("""
         INSERT INTO matches(court, session_id, selection_reason) VALUES (?, ?, ?)
@@ -253,10 +265,12 @@ def assign_group(db, court_id, session_id, group, reason):
                    [(match, seat, ticket) for seat, ticket in enumerate(group, 1)])
 
 
+# Read the saved preference for filling open courts without a manual call.
 def automatic_assignment(db):
     return bool(db.execute("SELECT auto_assign FROM rotation WHERE id = 1").fetchone()[0])
 
 
+# Assign eligible groups to available courts, refreshing the waiting list as assignments are made.
 def fill_courts(db):
     session = active_session(db)
     if not session:
@@ -276,10 +290,12 @@ def fill_courts(db):
             queue = [player for player in queue if player["id"] not in group]
 
 
+# Read whether recent wins and losses should influence grouping.
 def split_rotation(db):
     return bool(db.execute("SELECT split FROM rotation WHERE id = 1").fetchone()[0])
 
 
+# Assemble the browser board: court rosters, waiting players, suggested groups, settings and session totals.
 def state(db):
     courts = [dict(row) for row in db.execute("""
         SELECT courts.id, courts.open, courts.levels, matches.id AS match_id, matches.called, matches.started, matches.selection_reason
@@ -313,6 +329,7 @@ def state(db):
             "session": dict(latest) if latest else None}
 
 
+# Store equivalent Philippine numbers in the same format so one person cannot receive duplicate active tickets.
 def normalize_phone(raw):
     if not isinstance(raw, str):
         raise QueueError("Enter a mobile number.")
@@ -328,6 +345,7 @@ def normalize_phone(raw):
     raise QueueError("Enter a Philippine mobile number or an international number starting with +.")
 
 
+# Search saved profiles by name or the last four digits of a number.
 def members(db, query):
     query = query.strip().casefold()
     return [dict(row) for row in db.execute("""
@@ -341,6 +359,7 @@ def members(db, query):
     """, (query, query))]
 
 
+# Read completed matches for one player and derive their score, result, partner and opponents from the roster order.
 def member_history(db, member_id):
     rows = db.execute("""
         SELECT match.id, match.court, match.started, match.ended, match.winner,
@@ -375,6 +394,7 @@ def member_history(db, member_id):
     return history
 
 
+# Apply a requested action and refill courts automatically after actions that can make players or courts available.
 def change(db, data):
     apply_change(db, data)
     if data.get("action") in (
@@ -384,8 +404,10 @@ def change(db, data):
         fill_courts(db)
 
 
+# Validate and execute a staff action. The HTTP caller holds a write transaction so changes commit together.
 def apply_change(db, data):
     action = data.get("action")
+    # Session actions create or close the active session. Closing preserves completed match history.
     if action == "start_session":
         if active_session(db):
             raise QueueError("End the current session before starting another.")
@@ -420,6 +442,7 @@ def apply_change(db, data):
         if not data["split"]:
             db.execute("UPDATE tickets SET lane = NULL WHERE closed = 0")
         return
+    # Resolve saved profiles by their stable ID. Deletion anonymizes historical roster entries.
     if action in ("join_member", "edit_member", "delete_member"):
         member = db.execute("""
             SELECT * FROM profiles WHERE player_id = coalesce(
@@ -451,6 +474,7 @@ def apply_change(db, data):
             return
         if action == "join_member":
             data = dict(member)
+    # Validate profile fields before saving. Joining also creates a queue ticket and a session participation record.
     if action in ("join", "join_member", "edit_member", "add_member"):
         raw = data.get("name")
         name = " ".join(raw.split()) if isinstance(raw, str) else ""
@@ -509,6 +533,7 @@ def apply_change(db, data):
             """, (ticket,))
         return
 
+    # Rest pauses eligibility and the wait clock. Ready returns the ticket to active waiting.
     if action in ("rest", "ready"):
         now = int(time.time())
         if action == "rest":
@@ -573,6 +598,7 @@ def apply_change(db, data):
         db.execute("UPDATE courts SET levels = ? WHERE id = ?",
                    (json.dumps([level for level in LEVELS if level in levels]), court["id"]))
         return
+    # Compare the requested roster with the current next group to reject a stale call from another tab.
     if action == "call":
         if match or not court["open"]:
             raise QueueError("That court is unavailable.")
@@ -597,6 +623,7 @@ def apply_change(db, data):
             db.execute("UPDATE courts SET open = 0 WHERE id = ?", (court["id"],))
         db.execute("UPDATE matches SET ended = CAST(strftime('%s', 'now') AS INTEGER), canceled = 1 WHERE id = ?",
                    (match["id"],))
+    # Validate the result, end the match, and put eligible players back in the queue.
     elif action == "finish" and match["started"] is not None:
         split = split_rotation(db)
         winner = data.get("winner")
@@ -639,6 +666,7 @@ def apply_change(db, data):
         raise QueueError("That action is unavailable for this match.")
 
 
+# Return either filtered session summaries or the completed match rosters for one selected session.
 def session_history(db, session_id=None, player="", court=""):
     player = player.strip().casefold()
     matches = """
@@ -684,7 +712,9 @@ def session_history(db, session_id=None, player="", court=""):
     return list(games.values())
 
 
+# Route local HTTP requests, validate input, and send the HTML page or JSON responses.
 class Handler(BaseHTTPRequestHandler):
+    # Send a typed response with caching disabled so the desk receives current state.
     def reply(self, status, body, content_type="application/json; charset=utf-8"):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
@@ -694,9 +724,11 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # Encode a Python object as JSON before sending it to the browser.
     def json_reply(self, status, data):
         self.reply(status, json.dumps(data).encode())
 
+    # Serve one HTML shell for all admin pages, or read SQLite for a board, directory, or history request.
     def do_GET(self):
         url = urlsplit(self.path)
         path = url.path
@@ -724,6 +756,7 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.json_reply(404, {"error": "Page not found."})
 
+    # Validate the JSON action and take a SQLite write lock before changing any queue or match state.
     def do_POST(self):
         if self.path != "/api/action":
             self.json_reply(404, {"error": "Page not found."})
@@ -762,6 +795,7 @@ class Handler(BaseHTTPRequestHandler):
             self.json_reply(200, result)
 
 
+# Command-line entry point. Bind only to loopback so the offline desk stays on this computer.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
